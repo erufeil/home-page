@@ -1,0 +1,2 @@
+set WEATHER_API_KEY=b759de5e7240d5a10e326219524098ea
+python app.py

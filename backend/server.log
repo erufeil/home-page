@@ -1,0 +1,50 @@
+INFO:__main__:CORS habilitado para desarrollo
+INFO:__main__:Iniciando servidor en 127.0.0.1:5000
+INFO:__main__:API Dólar: https://api.bluelytics.com.ar/v2/latest
+INFO:__main__:API Clima: https://api.openweathermap.org/data/2.5/weather
+INFO:__main__:Ciudad clima: Córdoba
+INFO:__main__:Intervalo actualización: 300s
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:CORS habilitado para desarrollo
+INFO:__main__:Iniciando servidor en 127.0.0.1:5000
+INFO:__main__:API Dólar: https://api.bluelytics.com.ar/v2/latest
+INFO:__main__:API Clima: https://api.openweathermap.org/data/2.5/weather
+INFO:__main__:Ciudad clima: Córdoba
+INFO:__main__:Intervalo actualización: 300s
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 107-467-112
+INFO:werkzeug: * Detected change in 'D:\\Github\\DirTecno-Proyects\\landing-page\\backend\\services\\dolar.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:CORS habilitado para desarrollo
+INFO:__main__:Iniciando servidor en 127.0.0.1:5000
+INFO:__main__:API Dólar: https://api.bluelytics.com.ar/v2/latest
+INFO:__main__:API Clima: https://api.openweathermap.org/data/2.5/weather
+INFO:__main__:Ciudad clima: Córdoba
+INFO:__main__:Intervalo actualización: 300s
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 107-467-112
+INFO:werkzeug: * Detected change in 'D:\\Github\\DirTecno-Proyects\\landing-page\\backend\\services\\dolar.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:CORS habilitado para desarrollo
+INFO:__main__:Iniciando servidor en 127.0.0.1:5000
+INFO:__main__:API Dólar: https://api.bluelytics.com.ar/v2/latest
+INFO:__main__:API Clima: https://api.openweathermap.org/data/2.5/weather
+INFO:__main__:Ciudad clima: Córdoba
+INFO:__main__:Intervalo actualización: 300s
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 107-467-112
+INFO:werkzeug: * Detected change in 'D:\\Github\\DirTecno-Proyects\\landing-page\\backend\\app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:CORS habilitado para desarrollo
+INFO:__main__:Iniciando servidor en 127.0.0.1:5000
+INFO:__main__:API Dólar: https://api.bluelytics.com.ar/v2/latest
+INFO:__main__:API Clima: https://api.openweathermap.org/data/2.5/weather
+INFO:__main__:Ciudad clima: Córdoba
+INFO:__main__:Intervalo actualización: 300s
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 107-467-112

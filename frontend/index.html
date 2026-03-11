@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dólar + Clima Argentina</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1><i class="fas fa-chart-line"></i> Dólar + Clima Argentina</h1>
+            <p class="subtitle">Información en tiempo real sobre cotizaciones del dólar y condiciones climáticas</p>
+            <div class="controls">
+                <button id="themeToggle" class="btn-toggle" aria-label="Cambiar tema">
+                    <i class="fas fa-moon"></i> <span>Modo oscuro</span>
+                </button>
+                <button id="refreshBtn" class="btn-refresh" aria-label="Actualizar datos">
+                    <i class="fas fa-sync-alt"></i> <span>Actualizar</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main container">
+        <div class="layout-container">
+            <div class="main-content">
+                <section class="data-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-star"></i> Mis Favoritos</h2>
+                        <p class="last-update">Sitios web guardados: <span id="favoritesCount">0</span></p>
+                    </div>
+                    
+                    <div id="favoritesContainer" class="favorites-container">
+                        <div class="favorites-placeholder" id="favoritesPlaceholder">
+                            <div class="placeholder-content">
+                                <i class="fas fa-bookmark"></i>
+                                <h3>No hay favoritos aún</h3>
+                                <p>Agrega sitios web desde el panel lateral para verlos aquí.</p>
+                                <p>Cada sitio mostrará su logo y un enlace directo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-chart-pie"></i> Panel de Datos</h3>
+                    
+                    <div class="sidebar-cards">
+                        <div class="card card-weather">
+                            <div class="card-header">
+                                <h4><i class="fas fa-temperature-high"></i> Clima</h4>
+                                <div class="weather-icon-small" id="weatherIcon">
+                                    <i class="fas fa-sun"></i>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="weather-temp-small">
+                                    <span class="temp-value" id="temperatura">--</span>
+                                    <span class="temp-unit">°C</span>
+                                </div>
+                                <div class="weather-desc-small" id="descripcionClima">Cargando...</div>
+                                <div class="weather-details-small">
+                                    <div class="detail-small">
+                                        <span>Sensación: <strong id="sensacion">--</strong> °C</span>
+                                    </div>
+                                    <div class="detail-small">
+                                        <span>Humedad: <strong id="humedad">--</strong> %</span>
+                                    </div>
+                                </div>
+                                <div class="weather-city-small" id="ciudadClima">Córdoba</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-euro">
+                            <div class="card-header">
+                                <h4><i class="fas fa-euro-sign"></i> Euro Oficial</h4>
+                                <span class="badge">Euro</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="price-main-small">
+                                    <div class="price-label-small">Venta</div>
+                                    <div class="price-value-medium" id="euroVenta">$ --</div>
+                                </div>
+                                <div class="price-secondary-small">
+                                    <div class="price-label-tiny">Compra</div>
+                                    <div class="price-value-small" id="euroCompra">$ --</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-brecha">
+                            <div class="card-header">
+                                <h4><i class="fas fa-percentage"></i> Brecha</h4>
+                                <span class="badge">Euro vs Dolar</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="brecha-value-small" id="brecha">-- %</div>
+                                <p class="brecha-desc-small">Diferencia porcentual entre el Euro Oficial y el Dólar Oficial</p>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-oficial">
+                            <div class="card-header">
+                                <h4><i class="fas fa-landmark"></i> Dólar Oficial</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="price-main-small">
+                                    <div class="price-label-small">Venta</div>
+                                    <div class="price-value-medium" id="oficialVenta">$ --</div>
+                                </div>
+                                <div class="price-secondary-small">
+                                    <div class="price-label-tiny">Compra</div>
+                                    <div class="price-value-small" id="oficialCompra">$ --</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-blue">
+                            <div class="card-header">
+                                <h4><i class="fas fa-money-bill-wave"></i> Dólar Blue</h4>
+                                <span class="badge">Principal</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="price-main-small">
+                                    <div class="price-label-small">Venta</div>
+                                    <div class="price-value-medium" id="blueVenta">$ --</div>
+                                </div>
+                                <div class="price-secondary-small">
+                                    <div class="price-label-tiny">Compra</div>
+                                    <div class="price-value-small" id="blueCompra">$ --</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-favorites">
+                            <div class="card-header">
+                                <h4><i class="fas fa-plus-circle"></i> Agregar Sitio</h4>
+                                <span class="badge">Nuevo</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="favorites-form">
+                                    <div class="form-group">
+                                        <label for="urlInput"><i class="fas fa-link"></i> URL del sitio</label>
+                                        <input type="url" id="urlInput" class="url-input" placeholder="https://ejemplo.com" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="titleInput"><i class="fas fa-heading"></i> Título (opcional)</label>
+                                        <input type="text" id="titleInput" class="title-input" placeholder="Nombre del sitio">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="typeInput"><i class="fas fa-tag"></i> Tipo</label>
+                                        <select id="typeInput" class="url-input">
+                                            <option value="favorito">Favorito</option>
+                                            <option value="tarea_pendiente">Tarea Pendiente</option>
+                                        </select>
+                                    </div>
+                                    <button id="addFavoriteBtn" class="btn-add-favorite">
+                                        <i class="fas fa-bookmark"></i> Guardar
+                                    </button>
+                                    <div id="favoriteStatus" class="favorite-status"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card card-info">
+                            <div class="card-header">
+                                <h4><i class="fas fa-info-circle"></i> Información</h4>
+                            </div>
+                            <div class="card-body">
+                                <p class="info-text"><i class="fas fa-sync-alt"></i> Actualización: <strong id="updateInterval">5</strong> min</p>
+                                <p class="info-text"><i class="fas fa-database"></i> Dólar: <strong>Bluelytics</strong></p>
+                                <p class="info-text"><i class="fas fa-cloud"></i> Clima: <strong>OpenWeather</strong></p>
+                                <p class="info-text"><i class="fas fa-clock"></i> Última actualización: <span id="dolarUpdateTime">--:--:--</span></p>
+                                <p class="info-text"><i class="fas fa-star"></i> Favoritos: <span id="favoritesCount">0</span> sitios</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>Landing Page Dólar + Clima • Datos en tiempo real • Desarrollado con Flask y Vanilla JS</p>
+            <p class="timestamp">Última actualización completa: <span id="fullUpdateTime">--:--:--</span></p>
+        </div>
+    </footer>
+
+    <script src="js/app.js" defer></script>
+</body>
+</html>
