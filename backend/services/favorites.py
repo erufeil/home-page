@@ -27,7 +27,20 @@ def get_favorites():
     ensure_directories()
     try:
         with open(FAVORITES_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            favorites = json.load(f)
+        
+        # Migración: agregar campo 'tipo' si falta (backward compatibility)
+        modified = False
+        for favorite in favorites:
+            if 'tipo' not in favorite:
+                favorite['tipo'] = 'favorito'
+                modified = True
+        
+        if modified:
+            save_favorites(favorites)
+            logger.info("Migración: campo 'tipo' agregado a favoritos existentes")
+        
+        return favorites
     except (json.JSONDecodeError, FileNotFoundError):
         return []
 
@@ -247,7 +260,7 @@ def download_logo(logo_url, filename):
         logger.error(f"Error descargando logo {logo_url}: {e}")
         return None
 
-def add_favorite(url, title=None):
+def add_favorite(url, title=None, tipo='favorito'):
     """Agrega un nuevo favorito con scraping de logo."""
     ensure_directories()
     
@@ -292,6 +305,7 @@ def add_favorite(url, title=None):
             'title': title,
             'domain': clean_domain(extract_domain(url)),
             'logo': logo_filename,
+            'tipo': tipo,
             'created_at': datetime.now().isoformat()
         }
         
@@ -313,6 +327,7 @@ def add_favorite(url, title=None):
                 'title': title or clean_domain_name(extract_domain(url)),
                 'domain': clean_domain(extract_domain(url)),
                 'logo': None,
+                'tipo': tipo,
                 'created_at': datetime.now().isoformat()
             }
             favorites = get_favorites()

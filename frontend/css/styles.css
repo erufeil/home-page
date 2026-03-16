@@ -539,6 +539,36 @@ body {
     margin-top: var(--spacing-sm);
 }
 
+.favorites-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.favorites-section-header {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.favorites-section-header::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 1.25rem;
+    background-color: var(--primary-color);
+    border-radius: 2px;
+}
+
+.section-divider {
+    border: none;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: var(--spacing-lg) 0;
+}
+
 .favorite-card {
     background-color: var(--surface-color);
     border-radius: var(--border-radius);

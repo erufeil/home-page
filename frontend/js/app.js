@@ -359,16 +359,62 @@ function renderFavorites(favorites) {
     
     elements.favoritesPlaceholder.style.display = 'none';
     
-    const favoritesGrid = document.createElement('div');
-    favoritesGrid.className = 'favorites-grid';
-    
-    favorites.forEach(favorite => {
-        const favoriteCard = createFavoriteCard(favorite);
-        favoritesGrid.appendChild(favoriteCard);
-    });
+    // Separar favoritos por tipo
+    const tareasPendientes = favorites.filter(f => f.tipo === 'tarea_pendiente');
+    const favoritos = favorites.filter(f => f.tipo === 'favorito');
     
     elements.favoritesContainer.innerHTML = '';
-    elements.favoritesContainer.appendChild(favoritesGrid);
+    
+    // Crear sección de Tareas Pendientes (si hay)
+    if (tareasPendientes.length > 0) {
+        const tareasSection = document.createElement('div');
+        tareasSection.className = 'favorites-section';
+        
+        const tareasHeader = document.createElement('h3');
+        tareasHeader.className = 'favorites-section-header';
+        tareasHeader.textContent = `Tareas Pendientes (${tareasPendientes.length})`;
+        tareasSection.appendChild(tareasHeader);
+        
+        const tareasGrid = document.createElement('div');
+        tareasGrid.className = 'favorites-grid';
+        
+        tareasPendientes.forEach(favorite => {
+            const favoriteCard = createFavoriteCard(favorite);
+            tareasGrid.appendChild(favoriteCard);
+        });
+        
+        tareasSection.appendChild(tareasGrid);
+        elements.favoritesContainer.appendChild(tareasSection);
+    }
+    
+    // Agregar divisorio si hay ambas secciones
+    if (tareasPendientes.length > 0 && favoritos.length > 0) {
+        const divider = document.createElement('hr');
+        divider.className = 'section-divider';
+        elements.favoritesContainer.appendChild(divider);
+    }
+    
+    // Crear sección de Favoritos (si hay)
+    if (favoritos.length > 0) {
+        const favoritosSection = document.createElement('div');
+        favoritosSection.className = 'favorites-section';
+        
+        const favoritosHeader = document.createElement('h3');
+        favoritosHeader.className = 'favorites-section-header';
+        favoritosHeader.textContent = `Favoritos (${favoritos.length})`;
+        favoritosSection.appendChild(favoritosHeader);
+        
+        const favoritosGrid = document.createElement('div');
+        favoritosGrid.className = 'favorites-grid';
+        
+        favoritos.forEach(favorite => {
+            const favoriteCard = createFavoriteCard(favorite);
+            favoritosGrid.appendChild(favoriteCard);
+        });
+        
+        favoritosSection.appendChild(favoritosGrid);
+        elements.favoritesContainer.appendChild(favoritosSection);
+    }
 }
 
 function createFavoriteCard(favorite) {

@@ -5,7 +5,8 @@
     "title": "DeepSeek",
     "domain": "www.deepseek.com",
     "logo": "www.deepseek.com_20260311_130958.ico",
-    "created_at": "2026-03-11T13:09:59.109372"
+    "created_at": "2026-03-11T13:09:59.109372",
+    "tipo": "favorito"
   },
   {
     "id": "20260311131130",
@@ -13,7 +14,8 @@
     "title": "Pagina12",
     "domain": "www.pagina12.com.ar",
     "logo": "www.pagina12.com.ar_20260311_131130.ico",
-    "created_at": "2026-03-11T13:11:30.450074"
+    "created_at": "2026-03-11T13:11:30.450074",
+    "tipo": "favorito"
   },
   {
     "id": "20260311131219",
@@ -21,7 +23,8 @@
     "title": "Tiempo Argentino",
     "domain": "www.tiempoar.com.ar",
     "logo": "www.tiempoar.com.ar_20260311_131218.png",
-    "created_at": "2026-03-11T13:12:19.190141"
+    "created_at": "2026-03-11T13:12:19.190141",
+    "tipo": "favorito"
   },
   {
     "id": "20260311140545",
@@ -29,7 +32,8 @@
     "title": "Google",
     "domain": "www.google.com",
     "logo": "www.google.com_20260311_140544.ico",
-    "created_at": "2026-03-11T14:05:45.333451"
+    "created_at": "2026-03-11T14:05:45.333451",
+    "tipo": "favorito"
   },
   {
     "id": "20260311152256",
@@ -37,7 +41,8 @@
     "title": "Chapasplasticasmyca",
     "domain": "chapasplasticasmyca.com",
     "logo": "www.chapasplasticasmyca.com_20260311_152255.ico",
-    "created_at": "2026-03-11T15:22:56.716036"
+    "created_at": "2026-03-11T15:22:56.716036",
+    "tipo": "favorito"
   },
   {
     "id": "20260311161254",
@@ -45,7 +50,8 @@
     "title": "Github",
     "domain": "github.com",
     "logo": "github.com_20260311_161254.svg",
-    "created_at": "2026-03-11T16:12:54.483048"
+    "created_at": "2026-03-11T16:12:54.483048",
+    "tipo": "favorito"
   },
   {
     "id": "20260311161353",
@@ -53,6 +59,16 @@
     "title": "ML Convert",
     "domain": "mercadolibre.com.ar",
     "logo": "listado.mercadolibre.com.ar_20260311_161352.ico",
-    "created_at": "2026-03-11T16:13:53.588918"
+    "created_at": "2026-03-11T16:13:53.588918",
+    "tipo": "favorito"
+  },
+  {
+    "id": "20260311174258",
+    "url": "https://listado.mercadolibre.com.ar/_Container_mkp-t2-cyber-fest-marzo-2026-tec-smatphones-and-tablets#c_container_id=MLA1539802-1&c_id=%2Fsplinter%2Fspecial-withoutlabel&c_element_order=1&c_campaign=cat-smartphones&c_label=%2Fsplinter%2Fspecial-withoutlabel&c_uid=d2045e32-1d8a-11f1-87d0-6f71d9bfbaeb&c_element_id=d2045e32-1d8a-11f1-87d0-6f71d9bfbaeb&c_content_origin=splinter-default&c_content_type=default&c_global_position=5&deal_print_id=d1c50b40-1d8a-11f1-b34c-4ba1e5916bf9&c_tracking_id=d1c50b40-1d8a-11f1-b34c-4ba1e5916bf9",
+    "title": "celu ver",
+    "domain": "mercadolibre.com.ar",
+    "logo": "listado.mercadolibre.com.ar_20260311_174258.ico",
+    "tipo": "tarea_pendiente",
+    "created_at": "2026-03-11T17:42:58.856833"
   }
 ]

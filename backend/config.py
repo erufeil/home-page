@@ -13,7 +13,7 @@ WEATHER_API_URL = os.environ.get("WEATHER_API_URL", "https://api.openweathermap.
 WEATHER_CITY = os.environ.get("WEATHER_CITY", "Córdoba")
 
 # API Key de OpenWeatherMap (requiere registro gratuito)
-WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY", "b759de5e7240d5a10e326219524098ea")
+WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 # Intervalo de actualización en segundos (para frontend)
 UPDATE_INTERVAL = int(os.environ.get("UPDATE_INTERVAL", "300"))
