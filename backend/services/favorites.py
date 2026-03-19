@@ -11,9 +11,25 @@ import re
 
 logger = logging.getLogger(__name__)
 
+from flask_login import current_user
+from backend import db
+from backend.models import Favorite
+
 FAVORITES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'favorites')
 FAVORITES_FILE = os.path.join(FAVORITES_DIR, 'favorites.json')
 LOGOS_DIR = os.path.join(FAVORITES_DIR, 'logos')
+
+def _favorite_to_legacy_dict(fav):
+    """Convert Favorite SQLAlchemy object to legacy JSON format."""
+    return {
+        'id': str(fav.id),
+        'url': fav.url,
+        'title': fav.title,
+        'domain': fav.domain,
+        'logo': fav.logo_filename,
+        'tipo': fav.tipo,
+        'created_at': fav.created_at.isoformat() if fav.created_at else None
+    }
 
 def ensure_directories():
     """Asegura que existan los directorios necesarios."""
@@ -43,6 +59,11 @@ def get_favorites():
         return favorites
     except (json.JSONDecodeError, FileNotFoundError):
         return []
+
+def get_favorites_db():
+    """Obtiene la lista de favoritos del usuario actual desde la base de datos."""
+    favorites = db.session.query(Favorite).filter_by(user_id=current_user.id).order_by(Favorite.display_order).all()
+    return [_favorite_to_legacy_dict(fav) for fav in favorites]
 
 def save_favorites(favorites):
     """Guarda la lista de favoritos."""
@@ -260,7 +281,7 @@ def download_logo(logo_url, filename):
         logger.error(f"Error descargando logo {logo_url}: {e}")
         return None
 
-def add_favorite(url, title=None, tipo='favorito'):
+def add_favorite(url, title=None, tipo='favorito', use_db=False):
     """Agrega un nuevo favorito con scraping de logo."""
     ensure_directories()
     
@@ -299,20 +320,36 @@ def add_favorite(url, title=None, tipo='favorito'):
             title = title_match.group(1).strip() if title_match else clean_domain_name(extract_domain(url))
         
         # Crear objeto favorito
-        favorite = {
-            'id': datetime.now().strftime("%Y%m%d%H%M%S"),
-            'url': url,
-            'title': title,
-            'domain': clean_domain(extract_domain(url)),
-            'logo': logo_filename,
-            'tipo': tipo,
-            'created_at': datetime.now().isoformat()
-        }
-        
-        # Agregar a la lista
-        favorites = get_favorites()
-        favorites.append(favorite)
-        save_favorites(favorites)
+        if use_db:
+            # Crear objeto Favorite
+            domain = clean_domain(extract_domain(url))
+            favorite_obj = Favorite(
+                user_id=current_user.id,
+                url=url,
+                title=title,
+                domain=domain,
+                logo_filename=logo_filename,
+                tipo=tipo,
+                category_id=None,
+                display_order=0
+            )
+            db.session.add(favorite_obj)
+            db.session.commit()
+            favorite = _favorite_to_legacy_dict(favorite_obj)
+        else:
+            favorite = {
+                'id': datetime.now().strftime("%Y%m%d%H%M%S"),
+                'url': url,
+                'title': title,
+                'domain': clean_domain(extract_domain(url)),
+                'logo': logo_filename,
+                'tipo': tipo,
+                'created_at': datetime.now().isoformat()
+            }
+            # Agregar a la lista JSON
+            favorites = get_favorites()
+            favorites.append(favorite)
+            save_favorites(favorites)
         
         logger.info(f"Favorito agregado: {title} ({url})")
         return favorite
@@ -321,18 +358,34 @@ def add_favorite(url, title=None, tipo='favorito'):
         if e.response.status_code == 403:
             logger.warning(f"Acceso denegado (403) para {url}. Creando favorito sin logo.")
             # Still create favorite with limited info
-            favorite = {
-                'id': datetime.now().strftime("%Y%m%d%H%M%S"),
-                'url': url,
-                'title': title or clean_domain_name(extract_domain(url)),
-                'domain': clean_domain(extract_domain(url)),
-                'logo': None,
-                'tipo': tipo,
-                'created_at': datetime.now().isoformat()
-            }
-            favorites = get_favorites()
-            favorites.append(favorite)
-            save_favorites(favorites)
+            if use_db:
+                domain = clean_domain(extract_domain(url))
+                favorite_obj = Favorite(
+                    user_id=current_user.id,
+                    url=url,
+                    title=title or clean_domain_name(extract_domain(url)),
+                    domain=domain,
+                    logo_filename=None,
+                    tipo=tipo,
+                    category_id=None,
+                    display_order=0
+                )
+                db.session.add(favorite_obj)
+                db.session.commit()
+                favorite = _favorite_to_legacy_dict(favorite_obj)
+            else:
+                favorite = {
+                    'id': datetime.now().strftime("%Y%m%d%H%M%S"),
+                    'url': url,
+                    'title': title or clean_domain_name(extract_domain(url)),
+                    'domain': clean_domain(extract_domain(url)),
+                    'logo': None,
+                    'tipo': tipo,
+                    'created_at': datetime.now().isoformat()
+                }
+                favorites = get_favorites()
+                favorites.append(favorite)
+                save_favorites(favorites)
             logger.info(f"Favorito agregado (sin logo debido a 403): {favorite['title']} ({url})")
             return favorite
         else:
@@ -342,23 +395,16 @@ def add_favorite(url, title=None, tipo='favorito'):
         logger.error(f"Error agregando favorito {url}: {e}")
         raise
 
-def delete_favorite(favorite_id):
+def delete_favorite(favorite_id, use_db=False):
     """Elimina un favorito por ID."""
-    favorites = get_favorites()
-    deleted_favorite = None
-    updated_favorites = []
-    
-    for f in favorites:
-        if f['id'] != favorite_id:
-            updated_favorites.append(f)
-        else:
-            deleted_favorite = f
-    
-    if deleted_favorite:
+    if use_db:
+        favorite = db.session.query(Favorite).filter_by(id=favorite_id, user_id=current_user.id).first()
+        if not favorite:
+            return False
+        
         # Delete associated logo file if exists
-        logo = deleted_favorite.get('logo')
-        if logo:
-            logo_path = os.path.join(LOGOS_DIR, logo)
+        if favorite.logo_filename:
+            logo_path = os.path.join(LOGOS_DIR, favorite.logo_filename)
             try:
                 if os.path.exists(logo_path):
                     os.remove(logo_path)
@@ -367,7 +413,34 @@ def delete_favorite(favorite_id):
                 logger.error(f"Error deleting logo file {logo_path}: {e}")
                 # Continue with deletion of favorite even if logo deletion fails
         
-        save_favorites(updated_favorites)
+        db.session.delete(favorite)
+        db.session.commit()
         return True
-    
-    return False
+    else:
+        favorites = get_favorites()
+        deleted_favorite = None
+        updated_favorites = []
+        
+        for f in favorites:
+            if f['id'] != favorite_id:
+                updated_favorites.append(f)
+            else:
+                deleted_favorite = f
+        
+        if deleted_favorite:
+            # Delete associated logo file if exists
+            logo = deleted_favorite.get('logo')
+            if logo:
+                logo_path = os.path.join(LOGOS_DIR, logo)
+                try:
+                    if os.path.exists(logo_path):
+                        os.remove(logo_path)
+                        logger.info(f"Logo file deleted: {logo_path}")
+                except Exception as e:
+                    logger.error(f"Error deleting logo file {logo_path}: {e}")
+                    # Continue with deletion of favorite even if logo deletion fails
+            
+            save_favorites(updated_favorites)
+            return True
+        
+        return False

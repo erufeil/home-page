@@ -43,7 +43,9 @@ Este proyecto utiliza un sistema de documentación modular para mantener el cont
 3. **`context-code.md`** - Arquitectura detallada, algoritmos y estructuras de código
 4. **`context-memory.md`** - Historial de cambios, problemas resueltos y decisiones técnicas
 5. **`context-rta1.md`** - Información adicional y notas misceláneas
+6. **`context-app-multi-user.md`** - Planificacion de desarrollo y proximos pasos a seguir para programar
 
+Cada vez que termines debes actualizar los documentos para quue reflejen los ultimos cambios y crea un archivo `context-rta2.md` con todo lo realizado en la intervencion
 ---
 
 ## Estructura de Archivos del Proyecto

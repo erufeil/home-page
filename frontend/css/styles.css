@@ -896,3 +896,7 @@ body {
 .refreshing .fa-sync-alt {
     animation: spin 1s linear infinite;
 }
+
+.sortable-ghost {
+    opacity: 0.4;
+}

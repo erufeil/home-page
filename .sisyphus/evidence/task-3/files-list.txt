@@ -1,0 +1,15 @@
+backend/__init__.py
+backend/admin/__init__.py
+backend/admin/routes.py
+backend/api/__init__.py
+backend/api/routes.py
+backend/app.py
+backend/auth/__init__.py
+backend/auth/routes.py
+backend/config.py
+backend/frontend_routes.py
+backend/services/__init__.py
+backend/services/dolar.py
+backend/services/favorites.py
+backend/services/weather.py
+backend/test_domain_cleaning.py
