@@ -8,6 +8,7 @@ const API_URL = '/api/data';
 let updateInterval = 300000; // 5 minutos por defecto (en ms)
 let currentTheme = localStorage.getItem('theme') || 'light';
 let refreshTimer = null;
+let currentUser = null;
 
 // Formateadores
 const numberFormatter = new Intl.NumberFormat('es-AR', {
@@ -55,7 +56,6 @@ const elements = {
     // Favoritos
     urlInput: document.getElementById('urlInput'),
     titleInput: document.getElementById('titleInput'),
-    typeInput: document.getElementById('typeInput'),
     categoryInput: document.getElementById('categoryInput'),
     addFavoriteBtn: document.getElementById('addFavoriteBtn'),
     favoriteStatus: document.getElementById('favoriteStatus'),
@@ -269,36 +269,29 @@ function startAutoRefresh() {
 function addFavorite() {
     const url = elements.urlInput.value.trim();
     const title = elements.titleInput.value.trim();
-    const tipo = elements.typeInput.value;
     const categoryId = elements.categoryInput.value.trim();
-    
+
     if (!url) {
         showFavoriteStatus('Por favor ingresa una URL', 'error');
         return;
     }
-    
-    // Validar URL
+
     try {
         new URL(url);
     } catch {
         showFavoriteStatus('URL inválida', 'error');
         return;
     }
-    
-    // Deshabilitar botón mientras se procesa
+
     elements.addFavoriteBtn.disabled = true;
     elements.addFavoriteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-    
-    // Enviar al backend
+
     fetch('/api/v2/favorites', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            url, 
-            title: title || null, 
-            tipo,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            url,
+            title: title || null,
             category_id: categoryId || null
         })
     })
@@ -336,40 +329,18 @@ function showFavoriteStatus(message, type) {
 }
 
 function loadFavorites() {
-    // Try authenticated endpoint first
     fetch('/api/v2/favorites')
         .then(response => {
             if (response.status === 401) {
-                // Not authenticated, fallback to legacy endpoint
-                return fetch('/api/favorites')
-                    .then(legacyResponse => {
-                        if (legacyResponse.status === 401) {
-                            console.log('Usuario no autenticado, favoritos no disponibles');
-                            return [];
-                        }
-                        if (!legacyResponse.ok) {
-                            throw new Error('Error cargando favoritos del endpoint legacy');
-                        }
-                        return legacyResponse.json();
-                    })
-                    .then(favorites => {
-                        // Legacy favorites have no category data
-                        return favorites.map(fav => ({
-                            ...fav,
-                            category: null,
-                            category_id: null
-                        }));
-                    });
+                showLoginModal();
+                return null;
             }
-            if (!response.ok) {
-                throw new Error('Error cargando favoritos');
-            }
+            if (!response.ok) throw new Error('Error cargando favoritos');
             return response.json();
         })
         .then(data => {
-            // The authenticated endpoint returns { favorites: [...] }
-            // The legacy endpoint returns array
-            const favorites = data.favorites || data;
+            if (!data) return;
+            const favorites = data.favorites || [];
             updateFavoritesCount(favorites.length);
             renderFavorites(favorites);
         })
@@ -381,27 +352,16 @@ function loadFavorites() {
 function loadCategories() {
     fetch('/api/categories')
         .then(response => {
-            if (!response.ok) {
-                if (response.status === 401) {
-                    console.log('Usuario no autenticado, categorías no disponibles');
-                }
-                throw new Error('Error cargando categorías');
+            if (response.status === 401) {
+                showLoginModal();
+                return null;
             }
+            if (!response.ok) throw new Error('Error cargando categorías');
             return response.json();
         })
-        .then(categories => {
-            // Clear existing options except first default
-            const select = elements.categoryInput;
-            while (select.options.length > 1) {
-                select.remove(1);
-            }
-            // Add category options
-            categories.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.id;
-                option.textContent = category.name;
-                select.appendChild(option);
-            });
+        .then(data => {
+            if (!data) return;
+            populateCategories(data.categories || []);
         })
         .catch(error => {
             console.error('Error cargando categorías:', error);
@@ -412,19 +372,21 @@ function initSortableGrids() {
     const grids = document.querySelectorAll('.favorites-grid');
     grids.forEach(grid => {
         new Sortable(grid, {
+            group: 'favorites',
             animation: 150,
             ghostClass: 'sortable-ghost',
             onEnd: function(evt) {
-                const favoriteIds = Array.from(grid.children).map(child => parseInt(child.dataset.id));
-                // Keep current categories (no category_id provided)
+                const destGrid = evt.to;
+                const categoryId = destGrid.dataset.categoryId
+                    ? parseInt(destGrid.dataset.categoryId)
+                    : null;
+                const favoriteIds = Array.from(destGrid.children).map(c => parseInt(c.dataset.id));
                 fetch('/api/v2/favorites/reorder', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ favorite_ids: favoriteIds })
+                    body: JSON.stringify({ favorite_ids: favoriteIds, category_id: categoryId })
                 }).then(response => {
-                    if (!response.ok) {
-                        console.error('Failed to reorder favorites');
-                    }
+                    if (!response.ok) console.error('Failed to reorder favorites');
                 }).catch(error => console.error('Error:', error));
             }
         });
@@ -447,66 +409,63 @@ function renderFavorites(favorites) {
         elements.favoritesContainer.innerHTML = '';
         return;
     }
-    
+
     elements.favoritesPlaceholder.style.display = 'none';
-    
-    // Separar favoritos por tipo
-    const tareasPendientes = favorites.filter(f => f.tipo === 'tarea_pendiente');
-    const favoritos = favorites.filter(f => f.tipo === 'favorito');
-    
     elements.favoritesContainer.innerHTML = '';
-    
-    // Crear sección de Tareas Pendientes (si hay)
-    if (tareasPendientes.length > 0) {
-        const tareasSection = document.createElement('div');
-        tareasSection.className = 'favorites-section';
-        
-        const tareasHeader = document.createElement('h3');
-        tareasHeader.className = 'favorites-section-header';
-        tareasHeader.textContent = `Tareas Pendientes (${tareasPendientes.length})`;
-        tareasSection.appendChild(tareasHeader);
-        
-        const tareasGrid = document.createElement('div');
-        tareasGrid.className = 'favorites-grid';
-        
-        tareasPendientes.forEach(favorite => {
-            const favoriteCard = createFavoriteCard(favorite);
-            tareasGrid.appendChild(favoriteCard);
-        });
-        
-        tareasSection.appendChild(tareasGrid);
-        elements.favoritesContainer.appendChild(tareasSection);
+
+    // Agrupar por categoría (preservando el orden original)
+    const grouped = new Map(); // categoryId -> { category, items[] }
+    const uncategorized = [];
+
+    favorites.forEach(fav => {
+        if (fav.category) {
+            const catId = fav.category.id;
+            if (!grouped.has(catId)) {
+                grouped.set(catId, { category: fav.category, items: [] });
+            }
+            grouped.get(catId).items.push(fav);
+        } else {
+            uncategorized.push(fav);
+        }
+    });
+
+    function buildSection(label, color, items, categoryId) {
+        const section = document.createElement('div');
+        section.className = 'favorites-section';
+
+        const header = document.createElement('h3');
+        header.className = 'favorites-section-header';
+        if (color) {
+            const dot = document.createElement('span');
+            dot.className = 'category-dot';
+            dot.style.background = color;
+            header.appendChild(dot);
+            header.appendChild(document.createTextNode(` ${label} (${items.length})`));
+        } else {
+            header.textContent = `${label} (${items.length})`;
+        }
+        section.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'favorites-grid';
+        if (categoryId) grid.dataset.categoryId = categoryId;
+        items.forEach(fav => grid.appendChild(createFavoriteCard(fav)));
+        section.appendChild(grid);
+        return section;
     }
-    
-    // Agregar divisorio si hay ambas secciones
-    if (tareasPendientes.length > 0 && favoritos.length > 0) {
-        const divider = document.createElement('hr');
-        divider.className = 'section-divider';
-        elements.favoritesContainer.appendChild(divider);
+
+    grouped.forEach(({ category, items }) => {
+        elements.favoritesContainer.appendChild(
+            buildSection(category.name, category.color, items, category.id)
+        );
+    });
+
+    if (uncategorized.length > 0) {
+        elements.favoritesContainer.appendChild(
+            buildSection('Sin categoría', null, uncategorized, null)
+        );
     }
-    
-    // Crear sección de Favoritos (si hay)
-    if (favoritos.length > 0) {
-        const favoritosSection = document.createElement('div');
-        favoritosSection.className = 'favorites-section';
-        
-        const favoritosHeader = document.createElement('h3');
-        favoritosHeader.className = 'favorites-section-header';
-        favoritosHeader.textContent = `Favoritos (${favoritos.length})`;
-        favoritosSection.appendChild(favoritosHeader);
-        
-        const favoritosGrid = document.createElement('div');
-        favoritosGrid.className = 'favorites-grid';
-        
-        favoritos.forEach(favorite => {
-            const favoriteCard = createFavoriteCard(favorite);
-            favoritosGrid.appendChild(favoriteCard);
-        });
-        
-        favoritosSection.appendChild(favoritosGrid);
-        elements.favoritesContainer.appendChild(favoritosSection);
-    }
-    
+
     initSortableGrids();
 }
 
@@ -519,10 +478,11 @@ function createFavoriteCard(favorite) {
     card.setAttribute('aria-label', `Visitar ${favorite.title}`);
     
     // Logo
-    if (favorite.logo) {
+    const logoFile = favorite.logo_filename || favorite.logo;
+    if (logoFile) {
         const logo = document.createElement('img');
         logo.className = 'favorite-logo';
-        logo.src = `/favorites/logos/${favorite.logo}`;
+        logo.src = `/favorites/logos/${logoFile}`;
         logo.alt = `${favorite.title} logo`;
         logo.onerror = function() {
             this.style.display = 'none';
@@ -625,14 +585,291 @@ function deleteFavorite(favoriteId) {
     });
 }
 
+// ===== Gestión de Categorías =====
+
+function openCategoriesModal() {
+    document.getElementById('categoriesModal').classList.remove('hidden');
+    renderCategoriesList();
+}
+
+function closeCategoriesModal() {
+    document.getElementById('categoriesModal').classList.add('hidden');
+    document.getElementById('catStatus').classList.add('hidden');
+    document.getElementById('newCatName').value = '';
+}
+
+function setCatStatus(msg, isError) {
+    const el = document.getElementById('catStatus');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    el.style.background = isError ? '#fee2e2' : '#d1fae5';
+    el.style.color = isError ? 'var(--danger-color)' : 'var(--accent-color)';
+    setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+function renderCategoriesList() {
+    const list = document.getElementById('categoriesList');
+    list.innerHTML = '<li style="color:var(--text-muted);font-size:.85rem">Cargando...</li>';
+
+    fetch('/api/categories')
+        .then(r => r.json())
+        .then(data => {
+            const cats = data.categories || [];
+            list.innerHTML = '';
+            if (cats.length === 0) {
+                list.innerHTML = '<li style="color:var(--text-muted);font-size:.85rem">Sin categorías aún.</li>';
+                return;
+            }
+            cats.forEach(cat => {
+                const li = document.createElement('li');
+                li.className = 'category-item';
+                li.dataset.id = cat.id;
+
+                const dot = document.createElement('span');
+                dot.className = 'category-item-dot';
+                dot.style.background = cat.color;
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.className = 'category-item-name';
+                nameInput.value = cat.name;
+
+                const colorInput = document.createElement('input');
+                colorInput.type = 'color';
+                colorInput.className = 'category-item-color';
+                colorInput.value = cat.color;
+                colorInput.addEventListener('input', () => dot.style.background = colorInput.value);
+
+                const saveBtn = document.createElement('button');
+                saveBtn.type = 'button';
+                saveBtn.className = 'btn-save-category';
+                saveBtn.title = 'Guardar';
+                saveBtn.innerHTML = '<i class="fas fa-check"></i>';
+                saveBtn.onclick = () => updateCategory(cat.id, nameInput.value, colorInput.value);
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'btn-delete-category';
+                delBtn.title = 'Eliminar';
+                delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                delBtn.onclick = () => deleteCategory(cat.id);
+
+                li.append(dot, nameInput, colorInput, saveBtn, delBtn);
+                list.appendChild(li);
+            });
+        })
+        .catch(() => setCatStatus('Error cargando categorías', true));
+}
+
+function addCategory() {
+    const name = document.getElementById('newCatName').value.trim();
+    const color = document.getElementById('newCatColor').value;
+    if (!name) { setCatStatus('Escribí un nombre', true); return; }
+
+    fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, color })
+    })
+    .then(r => r.json().then(d => ({ status: r.status, data: d })))
+    .then(({ status, data }) => {
+        if (status === 201) {
+            document.getElementById('newCatName').value = '';
+            setCatStatus(`"${data.name}" creada`, false);
+            renderCategoriesList();
+            loadCategories();
+        } else {
+            setCatStatus(data.error || 'Error al crear', true);
+        }
+    })
+    .catch(() => setCatStatus('Error de conexión', true));
+}
+
+function updateCategory(id, name, color) {
+    if (!name.trim()) { setCatStatus('El nombre no puede estar vacío', true); return; }
+    fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), color })
+    })
+    .then(r => r.json().then(d => ({ status: r.status, data: d })))
+    .then(({ status, data }) => {
+        if (status === 200) {
+            setCatStatus('Guardado', false);
+            renderCategoriesList();
+            loadCategories();
+            loadFavorites();
+        } else {
+            setCatStatus(data.error || 'Error al guardar', true);
+        }
+    })
+    .catch(() => setCatStatus('Error de conexión', true));
+}
+
+function deleteCategory(id) {
+    if (!confirm('¿Eliminar esta categoría? Los favoritos quedarán sin categoría.')) return;
+    fetch(`/api/categories/${id}`, { method: 'DELETE' })
+    .then(r => {
+        if (r.ok) {
+            setCatStatus('Categoría eliminada', false);
+            renderCategoriesList();
+            loadCategories();
+            loadFavorites();
+        } else {
+            r.json().then(d => setCatStatus(d.error || 'Error al eliminar', true));
+        }
+    })
+    .catch(() => setCatStatus('Error de conexión', true));
+}
+
+// ===== Auth =====
+
+function showLoginModal() {
+    document.getElementById('loginModal').classList.remove('hidden');
+    document.getElementById('loginField').focus();
+}
+
+function hideLoginModal() {
+    document.getElementById('loginModal').classList.add('hidden');
+    document.getElementById('loginError').classList.add('hidden');
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginPassword').value = '';
+}
+
+function setAuthUI(user) {
+    currentUser = user;
+    const loginBtn = document.getElementById('loginBtn');
+    const userInfo = document.getElementById('userInfo');
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    if (user) {
+        loginBtn.classList.add('hidden');
+        usernameDisplay.textContent = user.username;
+        userInfo.classList.remove('hidden');
+    } else {
+        loginBtn.classList.remove('hidden');
+        userInfo.classList.add('hidden');
+    }
+}
+
+function doLogin() {
+    const login = document.getElementById('loginField').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+
+    if (!login || !password) {
+        errorEl.textContent = 'Completá usuario y contraseña.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+
+    fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password })
+    })
+    .then(response => response.json().then(data => ({ status: response.status, data })))
+    .then(({ status, data }) => {
+        if (status === 200) {
+            sessionStorage.setItem('username', data.username);
+            setAuthUI({ username: data.username });
+            hideLoginModal();
+            loadFavorites();
+            loadCategories();
+        } else {
+            errorEl.textContent = data.error || 'Credenciales incorrectas.';
+            errorEl.classList.remove('hidden');
+        }
+    })
+    .catch(() => {
+        errorEl.textContent = 'Error de conexión.';
+        errorEl.classList.remove('hidden');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar';
+    });
+}
+
+function doLogout() {
+    fetch('/api/auth/logout', { method: 'POST' })
+    .finally(() => {
+        sessionStorage.removeItem('username');
+        setAuthUI(null);
+        renderFavorites([]);
+        updateFavoritesCount(0);
+        // Limpiar categorías
+        const select = elements.categoryInput;
+        while (select.options.length > 1) select.remove(1);
+    });
+}
+
+function checkAuth() {
+    fetch('/api/categories')
+    .then(response => {
+        if (response.status === 401) {
+            showLoginModal();
+            return null;
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (!data) return;
+        // Autenticado: obtener username desde favoritos o asumir sesión activa
+        fetch('/api/v2/favorites')
+        .then(r => r.json())
+        .then(favData => {
+            // No hay endpoint /me, usamos el username guardado en sesión si existe
+            const stored = sessionStorage.getItem('username');
+            setAuthUI({ username: stored || 'Usuario' });
+            populateCategories(data.categories || []);
+            loadFavorites();
+        });
+    })
+    .catch(() => showLoginModal());
+}
+
+function populateCategories(categories) {
+    const select = elements.categoryInput;
+    while (select.options.length > 1) select.remove(1);
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.id;
+        option.textContent = category.name;
+        select.appendChild(option);
+    });
+}
+
 // Inicialización
 function init() {
     applyTheme();
     setupEventListeners();
+    setupAuthListeners();
     loadData();
-    loadFavorites();
-    loadCategories();
     startAutoRefresh();
+    checkAuth();
+}
+
+function setupAuthListeners() {
+    document.getElementById('loginBtn').addEventListener('click', showLoginModal);
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+    document.getElementById('loginSubmitBtn').addEventListener('click', doLogin);
+    document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('manageCategoriesBtn').addEventListener('click', openCategoriesModal);
+    document.getElementById('closeCategoriesBtn').addEventListener('click', closeCategoriesModal);
+    document.getElementById('addCategoryBtn').addEventListener('click', addCategory);
+    document.getElementById('newCatName').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addCategory();
+    });
+    // Cerrar modal al hacer click en el overlay
+    document.getElementById('categoriesModal').addEventListener('click', function(e) {
+        if (e.target === this) closeCategoriesModal();
+    });
 }
 
 // Iniciar aplicación cuando el DOM esté listo

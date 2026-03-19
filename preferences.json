@@ -1,0 +1,10 @@
+{
+  "default_categories": [
+    {"name": "Mensajería",      "color": "#1abc9c", "display_order": 0},
+    {"name": "IA IntArtif",     "color": "#8e44ad", "display_order": 1},
+    {"name": "Programación",    "color": "#2c3e50", "display_order": 2},
+    {"name": "Pagos",           "color": "#27ae60", "display_order": 3},
+    {"name": "Bancos",          "color": "#2980b9", "display_order": 4},
+    {"name": "Tareas Pendientes","color": "#e74c3c", "display_order": 5}
+  ]
+}

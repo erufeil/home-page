@@ -23,7 +23,7 @@ def get_dolar_data():
             }
         None: Si ocurre un error.
     """
-    from config import DOLAR_API_URL
+    from backend.config import DOLAR_API_URL
     
     try:
         response = requests.get(DOLAR_API_URL, timeout=10)

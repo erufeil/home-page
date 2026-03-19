@@ -57,7 +57,8 @@ def scrape_and_save_logo(url):
         response.raise_for_status()
         html_content = response.text
         
-        logo_url = find_logo_url(html_content, url)
+        logo_candidates = find_logo_url(html_content, url, url=url, title=title)
+        logo_url = logo_candidates[0] if logo_candidates else None
         if logo_url:
             logo_filename = generate_filename(url, logo_url)
             downloaded_path = download_logo(logo_url, logo_filename)

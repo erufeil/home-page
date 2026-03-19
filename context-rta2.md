@@ -236,3 +236,10 @@ Si se configura la conexión a MariaDB, el usuario debe aparecer en la tabla `us
 ---
 *Documento generado: 17 de marzo de 2026 - Wave 1 completada, Wave 2 Task 8 completada.*
 *Siguiente fase: Wave 2 Tasks 9‑14 - Authentication endpoints restantes.*
+
+
+
+----
+
+Pregunta, para administrar el manejo de 10 a 20 usuarios en vez de usar 5 tablas en SQL desde un servidor, no seria mas rapido manejarlas como tablas en memoria y guardarlas con csv en disco?
+

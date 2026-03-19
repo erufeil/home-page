@@ -27,7 +27,7 @@ def get_weather_data(city, api_key):
             }
         None: Si api_key está vacía o ocurre un error.
     """
-    from config import WEATHER_API_URL
+    from backend.config import WEATHER_API_URL
     
     if not api_key or api_key.strip() == "":
         logger.warning("API Key de clima no proporcionada. Clima no disponible.")

@@ -21,6 +21,17 @@
                 <button id="refreshBtn" class="btn-refresh" aria-label="Actualizar datos">
                     <i class="fas fa-sync-alt"></i> <span>Actualizar</span>
                 </button>
+                <div id="authControls">
+                    <button type="button" id="loginBtn" class="btn-toggle" aria-label="Iniciar sesión">
+                        <i class="fas fa-sign-in-alt"></i> <span>Iniciar sesión</span>
+                    </button>
+                    <span id="userInfo" class="user-info hidden">
+                        <i class="fas fa-user"></i> <span id="usernameDisplay"></span>
+                        <button type="button" id="logoutBtn" class="btn-logout" aria-label="Cerrar sesión">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </span>
+                </div>
             </div>
         </div>
     </header>
@@ -154,20 +165,17 @@
                                         <input type="text" id="titleInput" class="title-input" placeholder="Nombre del sitio">
                                     </div>
                                     <div class="form-group">
-                                        <label for="typeInput"><i class="fas fa-tag"></i> Tipo</label>
-                                        <select id="typeInput" class="url-input">
-                                            <option value="favorito">Favorito</option>
-                                            <option value="tarea_pendiente">Tarea Pendiente</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="categoryInput"><i class="fas fa-folder"></i> Categoría (opcional)</label>
+                                        <label for="categoryInput">
+                                            <i class="fas fa-folder"></i> Categoría (opcional)
+                                            <button type="button" id="manageCategoriesBtn" class="btn-manage-categories" title="Gestionar categorías">
+                                                <i class="fas fa-cog"></i>
+                                            </button>
+                                        </label>
                                         <select id="categoryInput" class="url-input">
                                             <option value="">Sin categoría</option>
-                                            <!-- Las categorías se cargarán dinámicamente -->
                                         </select>
                                     </div>
-                                    <button id="addFavoriteBtn" class="btn-add-favorite">
+                                    <button type="button" id="addFavoriteBtn" class="btn-add-favorite">
                                         <i class="fas fa-bookmark"></i> Guardar
                                     </button>
                                     <div id="favoriteStatus" class="favorite-status"></div>
@@ -199,6 +207,48 @@
             <p class="timestamp">Última actualización completa: <span id="fullUpdateTime">--:--:--</span></p>
         </div>
     </footer>
+
+    <!-- Modal de Categorías -->
+    <div id="categoriesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
+        <div class="modal-card modal-card-wide">
+            <div class="modal-header">
+                <h2 id="catModalTitle"><i class="fas fa-folder"></i> Gestionar Categorías</h2>
+                <button type="button" id="closeCategoriesBtn" class="btn-modal-close" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Agregar nueva categoría -->
+            <div class="cat-add-form">
+                <input type="text" id="newCatName" class="url-input" placeholder="Nombre de la categoría">
+                <input type="color" id="newCatColor" value="#3498db" title="Color">
+                <button type="button" id="addCategoryBtn" class="btn-add-favorite btn-sm">
+                    <i class="fas fa-plus"></i> Agregar
+                </button>
+            </div>
+            <div id="catStatus" class="login-error hidden"></div>
+
+            <!-- Lista de categorías -->
+            <ul id="categoriesList" class="categories-list"></ul>
+        </div>
+    </div>
+
+    <!-- Modal de Login -->
+    <div id="loginModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
+        <div class="modal-card">
+            <h2 id="loginModalTitle"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</h2>
+            <div class="form-group">
+                <label for="loginField"><i class="fas fa-user"></i> Usuario o email</label>
+                <input type="text" id="loginField" class="url-input" placeholder="admin" autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword"><i class="fas fa-lock"></i> Contraseña</label>
+                <input type="password" id="loginPassword" class="url-input" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <div id="loginError" class="login-error hidden"></div>
+            <button type="button" id="loginSubmitBtn" class="btn-add-favorite">
+                <i class="fas fa-sign-in-alt"></i> Entrar
+            </button>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
     <script src="js/app.js" defer></script>

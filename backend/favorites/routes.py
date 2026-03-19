@@ -2,6 +2,7 @@
 Favorite CRUD endpoints with category association.
 """
 import logging
+import os
 from urllib.parse import urlparse
 from flask import jsonify, request, make_response
 from flask_login import login_required, current_user
@@ -174,9 +175,8 @@ def create_favorite():
     domain = extract_domain(url)
     cleaned_domain = clean_domain(domain)
     
-    title = data.get('title', '').strip()
+    title = (data.get('title') or '').strip()
     if not title:
-        # Use cleaned domain as fallback title
         title = cleaned_domain.replace('.', ' ').title()
     
     tipo = data.get('tipo', 'favorito')
@@ -184,7 +184,97 @@ def create_favorite():
         tipo = 'favorito'
     
     logo_filename = data.get('logo_filename')
-    
+    if not logo_filename:
+        # Intentar scrapear el logo automáticamente
+        try:
+            import tempfile, shutil
+            from backend.services.favorites import (
+                find_logo_url, find_local_logo, generate_filename, ensure_directories, LOGOS_DIR
+            )
+            import requests as _req
+            ensure_directories()
+            logger.info(f"[LOGO] Iniciando scraping para: {url}")
+            _headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+            }
+            _resp = _req.get(url, headers=_headers, timeout=10)
+            logger.info(f"[LOGO] HTTP {_resp.status_code} al obtener página")
+            if _resp.ok:
+                _candidates = find_logo_url(_resp.text, url, url=url, title=title)
+                logger.info(f"[LOGO] Candidatos encontrados ({len(_candidates)}): {_candidates[:5]}")
+                MIN_SIZE = 2048  # 2 KB
+                _img_headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                }
+                # Descargar top candidatos a archivos temporales y medir tamaño
+                _scored_downloads = []  # (score_idx, size, tmp_path, candidate_url, final_name)
+                _tmpdir = tempfile.mkdtemp()
+                logger.info(f"[LOGO] Directorio temporal: {_tmpdir}")
+                logger.info(f"[LOGO] Directorio destino logos: {LOGOS_DIR}")
+                try:
+                    for _idx, _logo_url in enumerate(_candidates[:10]):
+                        _final_name = generate_filename(url, _logo_url)
+                        _final_path = os.path.join(LOGOS_DIR, _final_name)
+                        # Si ya existe en LOGOS_DIR, usarlo directo sin descargar
+                        if os.path.exists(_final_path):
+                            _size = os.path.getsize(_final_path)
+                            logger.info(f"[LOGO] [{_idx}] Ya existe en disco ({_size}B): {_final_name}")
+                            _scored_downloads.append((_idx, _size, None, _logo_url, _final_name))
+                            continue
+                        try:
+                            logger.info(f"[LOGO] [{_idx}] Descargando: {_logo_url}")
+                            _r = _req.get(_logo_url, headers=_img_headers, timeout=10)
+                            logger.info(f"[LOGO] [{_idx}] HTTP {_r.status_code}, {len(_r.content)}B, content-type={_r.headers.get('content-type','?')}")
+                            if not _r.ok:
+                                logger.warning(f"[LOGO] [{_idx}] Descarga fallida HTTP {_r.status_code}: {_logo_url}")
+                                continue
+                            _tmp = os.path.join(_tmpdir, f"candidate_{_idx}")
+                            with open(_tmp, 'wb') as _f:
+                                _f.write(_r.content)
+                            _scored_downloads.append((_idx, len(_r.content), _tmp, _logo_url, _final_name))
+                        except Exception as _dl_err:
+                            logger.warning(f"[LOGO] [{_idx}] Error descargando {_logo_url}: {_dl_err}")
+                            continue
+
+                    logger.info(f"[LOGO] Descargas exitosas: {len(_scored_downloads)}")
+                    if _scored_downloads:
+                        # Agrupar por score (idx 0 = mejor score; idx más alto = peor score)
+                        best_idx = _scored_downloads[0][0]
+                        # Todos los que tengan el mismo score que el mejor
+                        _tied = [d for d in _scored_downloads if d[0] == best_idx]
+                        # Tie-breaking: menor >= MIN_SIZE gana; si ninguno >= MIN_SIZE, el mayor
+                        _big = [d for d in _tied if d[1] >= MIN_SIZE]
+                        _winner = min(_big, key=lambda d: d[1]) if _big else max(_tied, key=lambda d: d[1])
+                        _, _wsize, _wtmp, _wurl, _wname = _winner
+                        if _wtmp is None:
+                            # Ya existía en LOGOS_DIR
+                            logo_filename = _wname
+                            logger.info(f"[LOGO] Usando logo ya existente: {_wname}")
+                        else:
+                            _dest = os.path.join(LOGOS_DIR, _wname)
+                            shutil.move(_wtmp, _dest)
+                            logo_filename = _wname
+                            logger.info(f"[LOGO] Logo guardado ({_wsize}B): {_dest}")
+                    else:
+                        logger.warning(f"[LOGO] Ningún candidato descargado exitosamente para {url}")
+                finally:
+                    shutil.rmtree(_tmpdir, ignore_errors=True)
+            else:
+                logger.warning(f"[LOGO] No se pudo obtener la página HTTP {_resp.status_code}: {url}")
+        except Exception as _e:
+            logger.warning(f"[LOGO] Scraping falló para {url}: {_e}", exc_info=True)
+
+        # Fallback: buscar en archivos locales ya existentes por scoring
+        if not logo_filename:
+            from backend.services.favorites import find_local_logo
+            logo_filename = find_local_logo(url, title)
+            if logo_filename:
+                logger.info(f"[LOGO] Fallback local encontró: {logo_filename}")
+            else:
+                logger.info(f"[LOGO] Sin logo encontrado para: {url}")
+
     category_id = data.get('category_id')
     if category_id is not None:
         # Validate category ownership
@@ -328,10 +418,7 @@ def update_favorite(favorite_id):
     if 'title' in data:
         title = data['title'].strip()
         if not title:
-            return make_response(
-                jsonify({"error": "Title cannot be empty"}),
-                400
-            )
+            title = clean_domain(favorite.domain).replace('.', ' ').title()
         favorite.title = title
     
     # Update tipo if provided

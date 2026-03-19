@@ -58,3 +58,10 @@ SESSION_KEY_PREFIX = "session:"
 
 # Logging
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
+# Environment (development | testing | production)
+ENV = os.environ.get("ENV", "production")
+
+# Initial users (comma-separated USERNAME and PASSWORD lists)
+INITIAL_USERNAMES = [u.strip() for u in os.environ.get("USERNAME", "").split(",") if u.strip()]
+INITIAL_PASSWORDS = [p.strip() for p in os.environ.get("PASSWORD", "").split(",") if p.strip()]

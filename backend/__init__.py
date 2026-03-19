@@ -77,39 +77,36 @@ def create_app(config=None):
             # Production: assume tables exist (created via migrations)
             logger.info(f"Running in {env} mode, assuming tables exist")
         
-        # Ensure at least one admin user exists (using ADMIN_PASSWORD from config)
-        admin_password = app.config.get('ADMIN_PASSWORD')
-        if admin_password:
+        # Create initial users from INITIAL_USERNAMES / INITIAL_PASSWORDS config
+        usernames = app.config.get('INITIAL_USERNAMES', [])
+        passwords = app.config.get('INITIAL_PASSWORDS', [])
+        pairs = list(zip(usernames, passwords))
+        if pairs:
             try:
-                existing_admin = db.session.query(User).filter(User.is_admin == True).first()
-                if not existing_admin:
-                    # Check if default admin user already exists (by username)
-                    admin_user = db.session.query(User).filter(
-                        User.username == 'admin'
-                    ).first()
-                    if not admin_user:
-                        admin_user = User(
-                            username='admin',
-                            email='admin@example.com',
-                            is_admin=True,
+                from backend.seed import seed_defaults_for_user
+                new_users = []
+                for i, (username, password) in enumerate(pairs):
+                    existing = db.session.query(User).filter(User.username == username).first()
+                    if not existing:
+                        user = User(
+                            username=username,
+                            email=f"{username}@example.com",
+                            is_admin=(i == 0),
                             is_active=True
                         )
-                        admin_user.set_password(admin_password)
-                        db.session.add(admin_user)
-                        db.session.commit()
-                        logger.info("Default admin user created (username: admin)")
-                    else:
-                        # Convert existing admin user to admin
-                        admin_user.is_admin = True
-                        admin_user.set_password(admin_password)
-                        db.session.commit()
-                        logger.info("Existing admin user updated with admin privileges")
-                else:
-                    logger.info("Admin user already exists")
+                        user.set_password(password)
+                        db.session.add(user)
+                        new_users.append(username)
+                        logger.info(f"Created user '{username}' (admin={i == 0})")
+                db.session.commit()
+                # Seed default categories for newly created users
+                for username in new_users:
+                    user = db.session.query(User).filter(User.username == username).first()
+                    if user:
+                        seed_defaults_for_user(user.id)
             except Exception as e:
-                logger.warning(f"Cannot create admin user (tables may not exist): {e}")
-        else:
-            logger.warning("ADMIN_PASSWORD not set - admin user will not be created automatically")
+                db.session.rollback()
+                logger.warning(f"Could not create initial users: {e}")
     
     # User loader for Flask-Login
     @login_manager.user_loader
