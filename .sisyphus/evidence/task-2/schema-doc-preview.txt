@@ -1,0 +1,50 @@
+# Database Schema - Context App Multi-User
+
+## Overview
+MariaDB schema for the multi-user version of the Context App (landing page with currency, weather, and favorites management).
+
+## Tables
+
+### 1. `user`
+Stores user accounts and authentication information.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | INT AUTO_INCREMENT | NO | | Primary key |
+| username | VARCHAR(50) | NO | | Unique username |
+| email | VARCHAR(100) | NO | | Unique email address |
+| password_hash | VARCHAR(255) | NO | | bcrypt hashed password |
+| is_admin | BOOLEAN | NO | FALSE | Admin privileges flag |
+| created_at | TIMESTAMP | YES | CURRENT_TIMESTAMP | Account creation time |
+| updated_at | TIMESTAMP | YES | CURRENT_TIMESTAMP ON UPDATE | Last update time |
+
+**Indexes:**
+- `PRIMARY KEY` (id)
+- `UNIQUE KEY` (username)
+- `UNIQUE KEY` (email)
+- `idx_username` (username)
+- `idx_email` (email)
+- `idx_created_at` (created_at)
+
+**Notes:**
+- Usernames and emails must be unique
+- Passwords are hashed using bcrypt
+- Admin users can access the admin panel
+
+### 2. `category`
+User-specific categories for organizing favorites.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| id | INT AUTO_INCREMENT | NO | | Primary key |
+| user_id | INT | NO | | Foreign key to user.id |
+| name | VARCHAR(50) | NO | | Category name (unique per user) |
+| color | VARCHAR(7) | YES | '#3498db' | Hex color for UI display |
+| display_order | INT | NO | 0 | Order within user's category list |
+| created_at | TIMESTAMP | YES | CURRENT_TIMESTAMP | Creation time |
+| updated_at | TIMESTAMP | YES | CURRENT_TIMESTAMP ON UPDATE | Last update time |
+
+**Constraints:**
+- `UNIQUE KEY uk_user_category` (user_id, name) - Ensures unique category names per user
+- `FOREIGN KEY` (user_id) REFERENCES user(id) ON DELETE CASCADE
+

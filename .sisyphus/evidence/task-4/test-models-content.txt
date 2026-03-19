@@ -1,0 +1,81 @@
+"""
+Tests for SQLAlchemy models.
+"""
+import pytest
+from backend.models import User, Category, Favorite, Session, Base
+
+def test_user_model():
+    """Test User model creation and password hashing."""
+    user = User(username='testuser', email='test@example.com')
+    user.set_password('TestPass123')
+    
+    assert user.username == 'testuser'
+    assert user.email == 'test@example.com'
+    assert user.password_hash is not None
+    assert user.password_hash != 'TestPass123'  # Should be hashed
+    assert user.is_admin is False
+    
+    # Password verification
+    assert user.check_password('TestPass123') is True
+    assert user.check_password('WrongPassword') is False
+    
+    # String representation
+    repr_str = repr(user)
+    assert 'User' in repr_str
+    assert 'testuser' in repr_str
+
+def test_category_model():
+    """Test Category model creation."""
+    category = Category(name='Test Category', color='#ff0000', display_order=1)
+    
+    assert category.name == 'Test Category'
+    assert category.color == '#ff0000'
+    assert category.display_order == 1
+
+def test_favorite_model():
+    """Test Favorite model creation."""
+    favorite = Favorite(
+        url='https://example.com',
+        title='Example',
+        domain='example.com',
+        tipo='favorito',
+        display_order=0
+    )
+    
+    assert favorite.url == 'https://example.com'
+    assert favorite.title == 'Example'
+    assert favorite.domain == 'example.com'
+    assert favorite.tipo == 'favorito'
+    assert favorite.display_order == 0
+
+def test_session_model():
+    """Test Session model creation."""
+    from datetime import datetime, timedelta
+    expiry = datetime.utcnow() + timedelta(days=7)
+    
+    session = Session(
+        session_id='test_session_123',
+        data='{"user_id": 1}',
+        expiry=expiry
+    )
+    
+    assert session.session_id == 'test_session_123'
+    assert 'user_id' in session.data
+    assert session.expiry == expiry
+
+def test_model_relationships():
+    """Test relationships between models."""
+    user = User(username='parent', email='parent@example.com')
+    user.set_password('pass')
+    
+    category = Category(name='Test', user=user)
+    favorite = Favorite(url='https://test.com', domain='test.com', user=user, category=category)
+    
+    # Test relationships
+    assert category in user.categories
+    assert favorite in user.favorites
+    assert favorite.category == category
+    assert favorite in category.favorites
+
+if __name__ == '__main__':
+    pytest.main([__file__, '-v'])

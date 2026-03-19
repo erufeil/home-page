@@ -56,6 +56,7 @@ const elements = {
     urlInput: document.getElementById('urlInput'),
     titleInput: document.getElementById('titleInput'),
     typeInput: document.getElementById('typeInput'),
+    categoryInput: document.getElementById('categoryInput'),
     addFavoriteBtn: document.getElementById('addFavoriteBtn'),
     favoriteStatus: document.getElementById('favoriteStatus'),
     favoritesCount: document.getElementById('favoritesCount'),
@@ -269,6 +270,7 @@ function addFavorite() {
     const url = elements.urlInput.value.trim();
     const title = elements.titleInput.value.trim();
     const tipo = elements.typeInput.value;
+    const categoryId = elements.categoryInput.value.trim();
     
     if (!url) {
         showFavoriteStatus('Por favor ingresa una URL', 'error');
@@ -288,12 +290,17 @@ function addFavorite() {
     elements.addFavoriteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
     
     // Enviar al backend
-    fetch('/api/favorites', {
+    fetch('/api/v2/favorites', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url, title: title || null, tipo })
+        body: JSON.stringify({ 
+            url, 
+            title: title || null, 
+            tipo,
+            category_id: categoryId || null
+        })
     })
     .then(response => {
         if (!response.ok) {
@@ -329,15 +336,99 @@ function showFavoriteStatus(message, type) {
 }
 
 function loadFavorites() {
-    fetch('/api/favorites')
-        .then(response => response.json())
-        .then(favorites => {
+    // Try authenticated endpoint first
+    fetch('/api/v2/favorites')
+        .then(response => {
+            if (response.status === 401) {
+                // Not authenticated, fallback to legacy endpoint
+                return fetch('/api/favorites')
+                    .then(legacyResponse => {
+                        if (legacyResponse.status === 401) {
+                            console.log('Usuario no autenticado, favoritos no disponibles');
+                            return [];
+                        }
+                        if (!legacyResponse.ok) {
+                            throw new Error('Error cargando favoritos del endpoint legacy');
+                        }
+                        return legacyResponse.json();
+                    })
+                    .then(favorites => {
+                        // Legacy favorites have no category data
+                        return favorites.map(fav => ({
+                            ...fav,
+                            category: null,
+                            category_id: null
+                        }));
+                    });
+            }
+            if (!response.ok) {
+                throw new Error('Error cargando favoritos');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // The authenticated endpoint returns { favorites: [...] }
+            // The legacy endpoint returns array
+            const favorites = data.favorites || data;
             updateFavoritesCount(favorites.length);
             renderFavorites(favorites);
         })
         .catch(error => {
             console.error('Error cargando favoritos:', error);
         });
+}
+
+function loadCategories() {
+    fetch('/api/categories')
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401) {
+                    console.log('Usuario no autenticado, categorías no disponibles');
+                }
+                throw new Error('Error cargando categorías');
+            }
+            return response.json();
+        })
+        .then(categories => {
+            // Clear existing options except first default
+            const select = elements.categoryInput;
+            while (select.options.length > 1) {
+                select.remove(1);
+            }
+            // Add category options
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error cargando categorías:', error);
+        });
+}
+
+function initSortableGrids() {
+    const grids = document.querySelectorAll('.favorites-grid');
+    grids.forEach(grid => {
+        new Sortable(grid, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                const favoriteIds = Array.from(grid.children).map(child => parseInt(child.dataset.id));
+                // Keep current categories (no category_id provided)
+                fetch('/api/v2/favorites/reorder', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ favorite_ids: favoriteIds })
+                }).then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to reorder favorites');
+                    }
+                }).catch(error => console.error('Error:', error));
+            }
+        });
+    });
 }
 
 function updateFavoritesCount(count) {
@@ -415,6 +506,8 @@ function renderFavorites(favorites) {
         favoritosSection.appendChild(favoritosGrid);
         elements.favoritesContainer.appendChild(favoritosSection);
     }
+    
+    initSortableGrids();
 }
 
 function createFavoriteCard(favorite) {
@@ -451,6 +544,22 @@ function createFavoriteCard(favorite) {
     title.className = 'favorite-title';
     title.textContent = favorite.title;
     card.appendChild(title);
+
+    // Categoría (si existe)
+    if (favorite.category) {
+        const categoryBadge = document.createElement('div');
+        categoryBadge.className = 'favorite-category';
+        categoryBadge.textContent = favorite.category.name;
+        categoryBadge.style.backgroundColor = favorite.category.color;
+        // Texto blanco para contraste
+        categoryBadge.style.color = '#ffffff';
+        categoryBadge.style.padding = '2px 8px';
+        categoryBadge.style.borderRadius = '12px';
+        categoryBadge.style.fontSize = '0.8em';
+        categoryBadge.style.display = 'inline-block';
+        categoryBadge.style.marginTop = '4px';
+        card.appendChild(categoryBadge);
+    }
     
     // Dominio y botón eliminar en misma línea
     const domainRow = document.createElement('div');
@@ -522,6 +631,7 @@ function init() {
     setupEventListeners();
     loadData();
     loadFavorites();
+    loadCategories();
     startAutoRefresh();
 }
 
